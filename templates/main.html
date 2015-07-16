@@ -73,23 +73,6 @@
     <%static:js group='main_vendor'/>
   % endif
 
-  <script>
-    window.baseUrl = "${settings.STATIC_URL}";
-    (function (require) {
-    % if settings.DEBUG is True:
-        ## Using what amounts to a random number in the Development environment for cache-busting
-        var urlArgs = "bust=" + (new Date()).getTime();
-    % else:
-        var urlArgs = "v=${settings.EDX_PLATFORM_REVISION}";
-    % endif
-      require.config({
-          baseUrl: baseUrl,
-          urlArgs: urlArgs
-      });
-    }).call(this, require || RequireJS.require);
-  </script>
-  <script type="text/javascript" src="${static.url("require-config-lms.js")}"></script>
-
   <%block name="headextra"/>
 
 <%
@@ -97,6 +80,7 @@
     header_extra_file = 'theme-head-extra.html'
     header_file = 'theme-header.html'
     google_analytics_file = 'theme-google-analytics.html'
+    footer_file = 'theme-footer.html'
 
     style_overrides_file = None
 
@@ -109,6 +93,12 @@
         header_file = microsite.get_template_path('navigation.html')
 
     google_analytics_file = microsite.get_template_path('google_analytics.html')
+
+    if settings.FEATURES['IS_EDX_DOMAIN'] and not is_microsite():
+        footer_file = microsite.get_template_path('footer-edx-new.html')
+
+    else:
+      footer_file = microsite.get_template_path('footer.html')
 
     style_overrides_file = microsite.get_value('css_overrides_file')
 %>
@@ -129,9 +119,21 @@
 
   <%include file="${google_analytics_file}" />
 
+
 % if style_overrides_file:
   <link rel="stylesheet" type="text/css" href="${static.url(style_overrides_file)}" />
 % endif
+
+  <!-- IndonesiaX CSS main html -->
+    <!-- Bootstrap Core CSS -->
+    <link href="${static.url('idx/css/bootstrap.min.css')}" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link href="${static.url('idx/css/ekko-lightbox.css')}" rel="stylesheet" /> 
+    <link href="${static.url('idx/css/animate.css')}" rel="stylesheet" /> 
+    <link href="${static.url('idx/css/style.css')}" rel="stylesheet" /> 
+    <link href="${static.url('idx/css/style-responsive.css')}" rel="stylesheet" />  
+    <link href="${static.url('idx/css/font-awesome.min')}" rel="stylesheet" />      
 
 </head>
 
@@ -141,28 +143,20 @@
 
     <%include file="mathjax_accessible.html" />
 
+  % if not suppress_toplevel_navigation:
     <%include file="${header_file}" />
-
+  %endif
     <div class="content-wrapper" id="content">
       ${self.body()}
       <%block name="bodyextra"/>
     </div>
-
-    <%block name="footer">
-      ## Can be overridden by child templates wanting to hide the footer. 
-      <%
-        if theme_enabled() and not is_microsite():
-          footer_file = 'theme-footer.html'
-        elif settings.FEATURES.get('IS_EDX_DOMAIN', False) and not is_microsite():
-          footer_file = microsite.get_template_path('footer-edx-new.html')
-        else:
-          footer_file = microsite.get_template_path('footer.html')
-      %>
-      <%include file="${footer_file}" />
-    </%block>
+  % if not suppress_toplevel_navigation:
+    <%include file="${footer_file}" />
+  % endif
 
   </div>
 
+  <script>window.baseUrl = "${settings.STATIC_URL}";</script>
   % if not disable_courseware_js:
     <%static:js group='application'/>
     <%static:js group='module-js'/>
@@ -173,12 +167,8 @@
 </html>
 
 <%def name="login_query()">${
-  u"?course_id={0}&enrollment_action={1}{email_opt_in}".format(
+  u"?course_id={0}&enrollment_action={1}".format(
     urlquote_plus(course_id),
-    urlquote_plus(enrollment_action),
-    email_opt_in=(
-      u"&email_opt_in=" + urlquote_plus(email_opt_in)
-      if email_opt_in else ""
-    )
+    urlquote_plus(enrollment_action)
   ) if course_id and enrollment_action else ""
 }</%def>
